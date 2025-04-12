@@ -1,13 +1,13 @@
-### Hi there 👋 I'm [Your Name]!
+### Hi there I'm [Athallah Dalimunthe]!
 
 🎮 **Game Designer** | 📱 **App Developer**  
-🔧 I love creating interactive experiences with code. Whether it's building mobile apps or designing fun game mechanics, I'm all in.
+🔧 I love creating random experiences with code. Whether it's building mobile apps or designing fun game mechanics, I'm all in.
 
 ---
 
 🧰 **Tech Stack**
 - 🐍 Python, 💠 C++
-- 🛠️ Unity (C#), Unreal Engine (learning!)
+- 🛠️ Unity (C#), Godot (GDScript, C/C++), Unreal Engine(learning!)
 - 📱 Flutter (Dart), React Native
 - 🎨 Figma, Photoshop
 
@@ -15,7 +15,7 @@
 
 📌 **What I'm Working On**
 - 🚀 A cross-platform productivity app using Flutter
-- 🎮 A 2D indie platformer built in Unity
+- 🎮 A 3D indie open world game built in Unity
 - 📚 Leveling up in Unreal Engine 5
 
 ---
