@@ -27,8 +27,8 @@
 ---
 
 📫 **Let's Connect!**
-- Portfolio: [yourwebsite.com](https://yourwebsite.com)
-- LinkedIn: [YourLinkedIn](https://linkedin.com/in/yourprofile)
-- Instagram: [@YourHandle](https://twitter.com/yourhandle)
+- Portfolio: 
+- LinkedIn: 
+- Instagram: 
 
-> *"Code is the canvas, creativity is the brush."* 🎨
+> *"I dont talk a lot btw."* 🎨
