@@ -1,12 +1,12 @@
 ### Hi there I'm [Athallah Dalimunthe]!
 
 🎮 **Game Designer** | 📱 **App Developer**  
-🔧 I love creating random experiences with code. Whether it's building mobile apps or designing fun game mechanics, I'm all in.
+🔧 I love creating random experiences with code. Whether it's building mobile apps or designing fun games.
 
 ---
 
 🧰 **Tech Stack**
-- 🐍 Python, 💠 C++
+- 🐍 Python, C/C++, GDScript, Lua
 - 🛠️ Unity (C#), Godot (GDScript, C/C++), Unreal Engine(learning!)
 - 📱 Flutter (Dart), React Native
 - 🎨 Figma, Photoshop
@@ -31,4 +31,4 @@
 - LinkedIn: 
 - Instagram: 
 
-> *"I dont talk a lot btw."* 🎨
+> *"I dont talk a lot btw."* 
