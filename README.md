@@ -1,6 +1,5 @@
 ### Hi there I'm [Athallah Dalimunthe]!
 
-🎮 **Game Designer** | 📱 **App Developer**  
 🔧 I love creating random experiences with code. Whether it's building mobile apps or designing fun games.
 
 ---
