@@ -1,0 +1,84 @@
+import { _decorator, Component, RigidBody2D, Vec2, input, Input, Label, Node, director, tween, Vec3, Color } from 'cc';
+const { ccclass, property } = _decorator;
+
+@ccclass('Player')
+export class Player extends Component {
+  @property(RigidBody2D) body!: RigidBody2D;
+  @property(Label) scoreLabel!: Label;
+  @property(Node) gameOverPanel!: Node;
+
+  private gravity = -10;
+  private alive = true;
+  private score = 0;
+
+  onLoad() {
+    input.on(Input.EventType.TOUCH_START, this.flip, this);
+    this.body.gravityScale = this.gravity;
+    this.schedule(this.tickScore, 1);
+  }
+
+  flip() {
+    if (!this.alive) return;
+
+    // Flip gravity
+    this.gravity *= -1;
+    this.body.gravityScale = this.gravity;
+
+    // Squash & stretch effect
+    tween(this.node)
+      .to(0.1, { scale: new Vec3(1.2, 0.8, 1) })
+      .to(0.1, { scale: new Vec3(1, 1, 1) })
+      .start();
+  }
+
+  tickScore() {
+  if (this.alive) {
+    this.score++;
+    this.scoreLabel.string = `${this.score}`;
+
+    // 🌈 Rainbow Flash effect
+    const colors = [
+      new Color(255, 0, 0),   // red
+      new Color(255, 165, 0), // orange
+      new Color(255, 255, 0), // yellow
+      new Color(0, 255, 0),   // green
+      new Color(0, 0, 255),   // blue
+      new Color(128, 0, 128), // purple
+    ];
+    const c = colors[Math.floor(Math.random() * colors.length)];
+    this.scoreLabel.color = c;
+  }
+}
+
+
+  update() {
+    const y = this.node.position.y;
+    if (y > 800 || y < -800) { // adjust for screen size
+      this.gameOver();
+    }
+  }
+
+  gameOver() {
+    if (!this.alive) return;
+
+    this.alive = false;
+    this.unschedule(this.tickScore);
+    this.gameOverPanel.active = true;
+
+    // Screen shake
+    const cam = director.getScene().getChildByName('Main Camera');
+    if (cam) {
+      const originalPos = cam.position.clone();
+      tween(cam)
+        .to(0.05, { position: originalPos.add3f(10, 0, 0) })
+        .to(0.05, { position: originalPos.add3f(-20, 0, 0) })
+        .to(0.05, { position: originalPos.add3f(10, 0, 0) })
+        .to(0.05, { position: originalPos }) // reset
+        .start();
+    }
+  }
+
+  retry() {
+    director.loadScene(director.getScene()!.name!);
+  }
+}
