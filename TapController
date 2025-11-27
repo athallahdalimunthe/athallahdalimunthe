@@ -1,0 +1,52 @@
+import { _decorator, Component, Camera, geometry, PhysicsSystem, input, Input, EventMouse } from 'cc';
+import { Block } from './Block'; // <-- import Block class
+const { ccclass, property } = _decorator;
+
+@ccclass('TapController')
+export class TapController extends Component {
+
+    @property(Camera)
+    cam: Camera | null = null;
+
+    onLoad() {
+        input.on(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
+        // for touch devices you can also listen to TOUCH_START:
+        input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
+    }
+
+    onDestroy() {
+        input.off(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
+        input.off(Input.EventType.TOUCH_START, this.onTouchStart, this);
+    }
+
+    onTouchStart = (event: any) => {
+        // touch event: getTouchByIndex(0) or use getLocation()
+        const pos = event.getLocation();
+        this.checkRay(pos.x, pos.y);
+    }
+
+    onMouseDown = (event: EventMouse) => {
+        const pos = event.getLocation();
+        this.checkRay(pos.x, pos.y);
+    }
+
+    checkRay(x: number, y: number) {
+        if (!this.cam) return;
+
+        const ray = new geometry.Ray();
+        this.cam.screenPointToRay(x, y, ray);
+
+        const hit = PhysicsSystem.instance.raycastClosest(ray);
+        if (!hit) return;
+
+        const result = PhysicsSystem.instance.raycastClosestResult;
+        const collider = result.collider;
+        if (!collider) return;
+
+        // typed component lookup
+        const block = collider.node.getComponent(Block);
+        if (block) {
+            block.onClick();
+        }
+    }
+}
