@@ -1,0 +1,28 @@
+import { _decorator, Component, MeshRenderer, Color, Node } from 'cc';
+const { ccclass, property } = _decorator;
+
+@ccclass('Block')
+export class Block extends Component {
+
+    colorID: number = 0;
+
+    init(id: number) {
+        this.colorID = id;
+
+        const mesh = this.getComponent(MeshRenderer);
+        if (!mesh) return;
+
+        const colors = [
+            new Color(255, 80, 80),
+            new Color(80, 255, 120),
+            new Color(80, 120, 255),
+            new Color(255, 255, 120)
+        ];
+
+        mesh.material.setProperty('albedo', colors[id]);
+    }
+
+    onClick() {
+        this.node.destroy();
+    }
+}
