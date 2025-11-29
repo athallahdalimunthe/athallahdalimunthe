@@ -1,0 +1,285 @@
+import { _decorator, Component, Prefab, instantiate, Node, Vec3, input, Input, EventMouse, EventTouch, Color } from 'cc';
+import { Block } from './Block';
+const { ccclass, property } = _decorator;
+
+@ccclass('StackManager')
+export class StackManager extends Component {
+
+    @property(Prefab)
+    public blockPrefab: Prefab | null = null;
+
+    @property
+    public laneRange: number = 3.0;
+
+    @property
+    public moveSpeed: number = 3.0;
+
+    @property
+    public initialWidth: number = 2.4;
+
+    @property
+    public blockHeight: number = 0.7;
+
+    @property
+    public maxHeight: number = 18;
+
+    @property
+    public minWidth: number = 0.45;
+
+    @property([Color])
+    public availableColors: Color[] = [
+        new Color(255, 90, 90, 255),
+        new Color(90, 255, 140, 255),
+        new Color(90, 140, 255, 255),
+        new Color(255, 255, 120, 255),
+    ];
+
+    private stack: Block[] = [];
+    private currentNode: Node | null = null;
+    private currentBlock: Block | null = null;
+    private currentDir: number = 1;
+    private moving: boolean = true;
+    private isGameOver: boolean = false;
+    private score: number = 0;
+
+    private tempPos: Vec3 = new Vec3();   // << Used to avoid readonly errors
+
+    start() {
+        if (!this.blockPrefab) {
+            console.error('StackManager: blockPrefab not assigned');
+            return;
+        }
+
+        this.spawnBaseBlock();
+        this.spawnMovingBlock();
+
+        input.on(Input.EventType.MOUSE_DOWN, this.onInputDown, this);
+        input.on(Input.EventType.TOUCH_START, this.onInputDown, this);
+        input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
+    }
+
+    onDestroy() {
+        input.off(Input.EventType.MOUSE_DOWN, this.onInputDown, this);
+        input.off(Input.EventType.TOUCH_START, this.onInputDown, this);
+        input.off(Input.EventType.KEY_DOWN, this.onKeyDown, this);
+    }
+
+    update(deltaTime: number) {
+        if (this.isGameOver) return;
+        if (!this.currentNode || !this.moving) return;
+
+        // copy position into tempPos
+        this.currentNode.getPosition(this.tempPos);
+
+        this.tempPos.x += this.currentDir * this.moveSpeed * deltaTime;
+
+        if (this.tempPos.x > this.laneRange) {
+            this.tempPos.x = this.laneRange;
+            this.currentDir = -1;
+        } else if (this.tempPos.x < -this.laneRange) {
+            this.tempPos.x = -this.laneRange;
+            this.currentDir = 1;
+        }
+
+        this.currentNode.setPosition(this.tempPos);
+    }
+
+    spawnBaseBlock() {
+        const node = instantiate(this.blockPrefab) as Node;
+        node.parent = this.node;
+        node.setPosition(0, 0, 0);
+
+        const comp = node.getComponent(Block)!;
+        comp.setWidth(this.initialWidth);
+        comp.setColor(this.getRandomColor(), Math.floor(Math.random() * this.availableColors.length));
+
+        this.stack.push(comp);
+    }
+
+    spawnMovingBlock() {
+        const y = this.stack.length * this.blockHeight + this.blockHeight;
+        const node = instantiate(this.blockPrefab)!;
+        node.parent = this.node;
+        node.setPosition(-this.laneRange, y, 0);
+
+        const comp = node.getComponent(Block)!;
+        comp.setWidth(this.initialWidth);
+
+        const colorIdx = Math.floor(Math.random() * this.availableColors.length);
+        comp.setColor(this.availableColors[colorIdx], colorIdx);
+
+        this.currentNode = node;
+        this.currentBlock = comp;
+        this.currentDir = 1;
+        this.moving = true;
+    }
+
+    private onInputDown = (e: EventMouse | EventTouch) => {
+        if (this.isGameOver) return;
+        this.dropCurrentBlock();
+    }
+
+    private onKeyDown = (e: any) => {
+        if (e.keyCode === 32 || e.keyCode === 8) {
+            if (!this.isGameOver) this.dropCurrentBlock();
+        }
+    }
+
+    private dropCurrentBlock() {
+        if (!this.currentNode || !this.currentBlock) return;
+        this.moving = false;
+
+        const top = this.stack[this.stack.length - 1];
+
+        this.currentNode.getPosition(this.tempPos);
+        const curX = this.tempPos.x;
+
+        top.node.getPosition(this.tempPos);
+        const topX = this.tempPos.x;
+
+        const halfTop = top.widthWorld * 0.5;
+        const halfCur = this.currentBlock.widthWorld * 0.5;
+
+        const curLeft = curX - halfCur;
+        const curRight = curX + halfCur;
+        const topLeft = topX - halfTop;
+        const topRight = topX + halfTop;
+
+        const overlapLeft = Math.max(curLeft, topLeft);
+        const overlapRight = Math.min(curRight, topRight);
+
+        const overlap = overlapRight - overlapLeft;
+
+        if (overlap <= 0) {
+            this.onGameOver("No overlap");
+            return;
+        }
+
+        const newWidth = overlap;
+        const newCenterX = (overlapLeft + overlapRight) * 0.5;
+
+        this.currentNode.getPosition(this.tempPos);
+        this.tempPos.x = newCenterX;
+        this.currentNode.setPosition(this.tempPos);
+
+        this.currentBlock.setWidth(newWidth);
+
+        if (newWidth < this.minWidth) {
+            this.placeCurrentBlockAndProcess(() => {
+                this.onGameOver("Block too small");
+            });
+            return;
+        }
+
+        this.placeCurrentBlockAndProcess();
+    }
+
+    private placeCurrentBlockAndProcess(onComplete?: () => void) {
+        if (!this.currentBlock || !this.currentNode) return;
+
+        const targetY = this.stack.length * this.blockHeight;
+
+        this.currentNode.getPosition(this.tempPos);
+        this.tempPos.y = targetY;
+        this.currentNode.setPosition(this.tempPos);
+
+        this.stack.push(this.currentBlock);
+
+        this.currentNode = null;
+        this.currentBlock = null;
+
+        const topIndex = this.stack.length - 1;
+        this.checkVerticalMatchesAt(topIndex);
+
+        if (this.stack.length >= this.maxHeight) {
+            this.onGameOver("Tower too high");
+            return;
+        }
+
+        this.scheduleOnce(() => {
+            if (!this.isGameOver) this.spawnMovingBlock();
+            if (onComplete) onComplete();
+        }, 0.08);
+    }
+
+    private checkVerticalMatchesAt(index: number) {
+        if (index < 0 || index >= this.stack.length) return;
+
+        const targetColor = this.stack[index].colorIndex;
+        let low = index, high = index;
+
+        for (let i = index - 1; i >= 0; i--) {
+            if (this.stack[i].colorIndex === targetColor) low = i;
+            else break;
+        }
+
+        for (let j = index + 1; j < this.stack.length; j++) {
+            if (this.stack[j].colorIndex === targetColor) high = j;
+            else break;
+        }
+
+        const count = high - low + 1;
+
+        if (count >= 3) {
+            for (let k = high; k >= low; k--) {
+                const b = this.stack[k];
+                b.destroySelf();
+                this.stack.splice(k, 1);
+            }
+
+            this.score += count * 10;
+
+            this.rebuildStackPositions();
+        }
+    }
+
+    private rebuildStackPositions() {
+        for (let i = 0; i < this.stack.length; i++) {
+            const b = this.stack[i];
+
+            b.node.getPosition(this.tempPos);
+            this.tempPos.y = i * this.blockHeight;
+            b.node.setPosition(this.tempPos);
+        }
+    }
+
+    private onGameOver(reason: string) {
+        console.log("GAME OVER:", reason, "Score:", this.score);
+        this.isGameOver = true;
+    }
+
+    public continueAfterAd(removeTopCount: number = 3) {
+        if (!this.isGameOver) return;
+
+        for (let i = 0; i < removeTopCount; i++) {
+            if (this.stack.length <= 1) break;
+            const b = this.stack.pop()!;
+            b.destroySelf();
+        }
+
+        this.rebuildStackPositions();
+        this.isGameOver = false;
+
+        this.scheduleOnce(() => {
+            this.spawnMovingBlock();
+        }, 0.1);
+    }
+/**
+ * Called by an external input handler (TapController).
+ * hitPos is optional — currently ignored by drop logic but useful later.
+ */
+public placeBlock(hitPos?: Vec3) {
+    if (this.isGameOver) return;
+    // keep the behavior same as tapping in-stack: drop current block
+    this.dropCurrentBlock();
+}
+
+    private getRandomColor(): Color {
+        const idx = Math.floor(Math.random() * this.availableColors.length);
+        return this.availableColors[idx];
+    }
+
+    public getScore() {
+        return this.score;
+    }
+}
