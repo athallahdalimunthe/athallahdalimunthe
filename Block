@@ -3,26 +3,34 @@ const { ccclass, property } = _decorator;
 
 @ccclass('Block')
 export class Block extends Component {
+    public colorIndex: number = 0;
+    public widthWorld: number = 1; // actual world width (x-axis)
+    public heightWorld: number = 0.6; // y size
+    public depthWorld: number = 1; // z size
 
-    colorID: number = 0;
+    // reference to MeshRenderer (for color)
+    onLoad() {}
 
-    init(id: number) {
-        this.colorID = id;
-
-        const mesh = this.getComponent(MeshRenderer);
-        if (!mesh) return;
-
-        const colors = [
-            new Color(255, 80, 80),
-            new Color(80, 255, 120),
-            new Color(80, 120, 255),
-            new Color(255, 255, 120)
-        ];
-
-        mesh.material.setProperty('albedo', colors[id]);
+    public setColor(color: Color, idx: number) {
+        this.colorIndex = idx;
+        const mr = this.getComponent(MeshRenderer);
+        if (mr && mr.material) {
+            mr.material.setProperty('albedo', color);
+        }
     }
 
-    onClick() {
+    /**
+     * Resize block to given width (world units).
+     * It assumes the model's original width is 1 world unit; adjust if needed.
+     */
+    public setWidth(worldWidth: number) {
+        this.widthWorld = worldWidth;
+        // Assuming the prefab original scale.x corresponds to 1 unit width.
+        const sx = worldWidth;
+        this.node.setScale(sx, this.heightWorld, this.depthWorld);
+    }
+
+    public destroySelf() {
         this.node.destroy();
     }
 }
