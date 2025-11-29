@@ -1,52 +1,38 @@
-import { _decorator, Component, Camera, geometry, PhysicsSystem, input, Input, EventMouse } from 'cc';
-import { Block } from './Block'; // <-- import Block class
+import { _decorator, Component, Camera, input, Input, Vec2, PhysicsSystem, geometry, Vec3 } from 'cc';
+import { StackManager } from './StackManager';
 const { ccclass, property } = _decorator;
 
 @ccclass('TapController')
 export class TapController extends Component {
 
     @property(Camera)
-    cam: Camera | null = null;
+    camera: Camera = null;
 
-    onLoad() {
-        input.on(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
-        // for touch devices you can also listen to TOUCH_START:
+    @property(StackManager)
+    stackManager: StackManager = null;
+
+    private _ray: geometry.Ray = new geometry.Ray();
+
+    start() {
         input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
     }
 
-    onDestroy() {
-        input.off(Input.EventType.MOUSE_DOWN, this.onMouseDown, this);
-        input.off(Input.EventType.TOUCH_START, this.onTouchStart, this);
-    }
+    onTouchStart(event: any) {
+        const location = event.getLocation() as Vec2;
 
-    onTouchStart = (event: any) => {
-        // touch event: getTouchByIndex(0) or use getLocation()
-        const pos = event.getLocation();
-        this.checkRay(pos.x, pos.y);
-    }
+        if (!this.camera) return;
+        if (!this.stackManager) return;
 
-    onMouseDown = (event: EventMouse) => {
-        const pos = event.getLocation();
-        this.checkRay(pos.x, pos.y);
-    }
+        // Generate ray from screen touch
+        this.camera.screenPointToRay(location.x, location.y, this._ray);
 
-    checkRay(x: number, y: number) {
-        if (!this.cam) return;
+        const mask = 0xffffffff; // collide with everything
+        const result = PhysicsSystem.instance.raycastClosest(this._ray, mask);
 
-        const ray = new geometry.Ray();
-        this.cam.screenPointToRay(x, y, ray);
-
-        const hit = PhysicsSystem.instance.raycastClosest(ray);
-        if (!hit) return;
-
-        const result = PhysicsSystem.instance.raycastClosestResult;
-        const collider = result.collider;
-        if (!collider) return;
-
-        // typed component lookup
-        const block = collider.node.getComponent(Block);
-        if (block) {
-            block.onClick();
+        if (result) {
+            const hit = PhysicsSystem.instance.raycastClosestResult;
+            const hitPos = hit.hitPoint.clone();
+            this.stackManager.placeBlock(hitPos);
         }
     }
 }
