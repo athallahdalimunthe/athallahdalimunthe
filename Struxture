@@ -1,11 +1,14 @@
 extends Control
 
 @export var square_size := 120
-@export var max_rows := 16
+@export var base_max_rows := 16
 
 var current_row := 0
 var score := 0
 var game_over := false
+
+var effective_max_rows := 16
+var last_tap_time := 0.0
 
 @onready var score_label := $ScoreLabel
 
@@ -13,6 +16,7 @@ var game_over_layer : Control
 
 func _ready():
 	score_label.text = "0"
+	last_tap_time = Time.get_ticks_msec() / 1000.0
 
 func _input(event):
 	if game_over:
@@ -23,7 +27,18 @@ func _input(event):
 		place_square()
 
 func place_square():
-	if current_row >= max_rows:
+	var now := Time.get_ticks_msec() / 1000.0
+	var tap_delay := now - last_tap_time
+	last_tap_time = now
+
+	# 😇 CALM PLAY CAN EXTEND LIMIT
+	effective_max_rows = base_max_rows
+
+	if score >= 10 and tap_delay > 0.6:
+		if randi() % 3 == 0:
+			effective_max_rows += 1
+
+	if current_row >= effective_max_rows:
 		end_game()
 		return
 
@@ -32,7 +47,7 @@ func place_square():
 	square.stretch_mode = TextureRect.STRETCH_SCALE
 	square.custom_minimum_size = Vector2(square_size, square_size)
 	square.size = Vector2(square_size, square_size)
-	square.scale = Vector2(0.5, 0.5)
+	square.scale = Vector2(0.8, 0.8)
 
 	var screen_size := get_viewport_rect().size
 
@@ -66,19 +81,13 @@ func show_game_over():
 	game_over_layer.anchor_top = 0
 	game_over_layer.anchor_right = 1
 	game_over_layer.anchor_bottom = 1
-	game_over_layer.offset_left = 0
-	game_over_layer.offset_top = 0
-	game_over_layer.offset_right = 0
-	game_over_layer.offset_bottom = 0
 
-	# Dark background
 	var bg := ColorRect.new()
 	bg.color = Color(0, 0, 0, 0.7)
 	bg.anchor_right = 1
 	bg.anchor_bottom = 1
 	game_over_layer.add_child(bg)
 
-	# Text
 	var label := Label.new()
 	label.text = "GAME OVER\nScore: " + str(score)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -90,9 +99,8 @@ func show_game_over():
 	label.offset_top = 300
 	game_over_layer.add_child(label)
 
-	# Continue button (fake for now)
 	var continue_btn := Button.new()
-	continue_btn.text = "Continue by Watching Ads"
+	continue_btn.text = "Continue (Ad)"
 	continue_btn.anchor_left = 0.25
 	continue_btn.anchor_right = 0.75
 	continue_btn.anchor_top = 0.55
@@ -100,9 +108,8 @@ func show_game_over():
 	continue_btn.pressed.connect(_on_continue_pressed)
 	game_over_layer.add_child(continue_btn)
 
-	# Give up button
 	var give_up_btn := Button.new()
-	give_up_btn.text = "Accept Fate"
+	give_up_btn.text = "Give Up"
 	give_up_btn.anchor_left = 0.25
 	give_up_btn.anchor_right = 0.75
 	give_up_btn.anchor_top = 0.7
@@ -113,7 +120,7 @@ func show_game_over():
 	add_child(game_over_layer)
 
 func _on_continue_pressed():
-	print("Continue pressed (ads later)")
+	print("Continue later with ads")
 
 func _on_give_up_pressed():
 	get_tree().reload_current_scene()
