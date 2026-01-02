@@ -1,0 +1,119 @@
+extends Control
+
+@export var square_size := 120
+@export var max_rows := 16
+
+var current_row := 0
+var score := 0
+var game_over := false
+
+@onready var score_label := $ScoreLabel
+
+var game_over_layer : Control
+
+func _ready():
+	score_label.text = "0"
+
+func _input(event):
+	if game_over:
+		return
+
+	if (event is InputEventScreenTouch and event.pressed) \
+	or (event is InputEventMouseButton and event.pressed):
+		place_square()
+
+func place_square():
+	if current_row >= max_rows:
+		end_game()
+		return
+
+	var square := TextureRect.new()
+	square.texture = preload("res://Art/Black.png")
+	square.stretch_mode = TextureRect.STRETCH_SCALE
+	square.custom_minimum_size = Vector2(square_size, square_size)
+	square.size = Vector2(square_size, square_size)
+	square.scale = Vector2(0.5, 0.5)
+
+	var screen_size := get_viewport_rect().size
+
+	var effective_row := current_row
+	if score >= 7 and randi() % 4 == 0:
+		effective_row += 1
+
+	square.position = Vector2(
+		(screen_size.x - square_size) / 2,
+		screen_size.y - square_size * (effective_row + 1)
+	)
+
+	add_child(square)
+
+	var tween := create_tween()
+	tween.tween_property(square, "scale", Vector2.ONE, 0.15)\
+		.set_trans(Tween.TRANS_BACK)\
+		.set_ease(Tween.EASE_OUT)
+
+	current_row += 1
+	score += 1
+	score_label.text = str(score)
+
+func end_game():
+	game_over = true
+	show_game_over()
+
+func show_game_over():
+	game_over_layer = Control.new()
+	game_over_layer.anchor_left = 0
+	game_over_layer.anchor_top = 0
+	game_over_layer.anchor_right = 1
+	game_over_layer.anchor_bottom = 1
+	game_over_layer.offset_left = 0
+	game_over_layer.offset_top = 0
+	game_over_layer.offset_right = 0
+	game_over_layer.offset_bottom = 0
+
+	# Dark background
+	var bg := ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.7)
+	bg.anchor_right = 1
+	bg.anchor_bottom = 1
+	game_over_layer.add_child(bg)
+
+	# Text
+	var label := Label.new()
+	label.text = "GAME OVER\nScore: " + str(score)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.anchor_left = 0
+	label.anchor_top = 0
+	label.anchor_right = 1
+	label.anchor_bottom = 0.5
+	label.offset_top = 300
+	game_over_layer.add_child(label)
+
+	# Continue button (fake for now)
+	var continue_btn := Button.new()
+	continue_btn.text = "Continue by Watching Ads"
+	continue_btn.anchor_left = 0.25
+	continue_btn.anchor_right = 0.75
+	continue_btn.anchor_top = 0.55
+	continue_btn.anchor_bottom = 0.65
+	continue_btn.pressed.connect(_on_continue_pressed)
+	game_over_layer.add_child(continue_btn)
+
+	# Give up button
+	var give_up_btn := Button.new()
+	give_up_btn.text = "Accept Fate"
+	give_up_btn.anchor_left = 0.25
+	give_up_btn.anchor_right = 0.75
+	give_up_btn.anchor_top = 0.7
+	give_up_btn.anchor_bottom = 0.8
+	give_up_btn.pressed.connect(_on_give_up_pressed)
+	game_over_layer.add_child(give_up_btn)
+
+	add_child(game_over_layer)
+
+func _on_continue_pressed():
+	print("Continue pressed (ads later)")
+
+func _on_give_up_pressed():
+	get_tree().reload_current_scene()
