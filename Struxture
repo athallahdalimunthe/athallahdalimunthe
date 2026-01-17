@@ -1,10 +1,9 @@
 extends Control
 
-@onready var big_button: Button = $BigButton
+@onready var big_button: Button = $UILayer/BigButton
 @onready var chaos_node: Node2D = $ChaosNode
-@onready var effect_flash: TextureRect = $EffectFlash
-@onready var instruction_label: Label = $InstructionLabel
-
+@onready var effect_flash: TextureRect = $UILayer/EffectFlash
+@onready var instruction_label: Label = $UILayer/InstructionLabel
 
 var chaos_textures: Array[Texture2D] = []
 var spawn_count := 0
@@ -17,38 +16,45 @@ func _ready():
 	load_chaos_assets()
 	instruction_label.text = "PRESS TO INCREASE VALUE"
 
+
 func load_chaos_assets():
 	var dir := DirAccess.open("res://Assets")
 	if dir:
 		_load_dir_recursive(dir, "res://Assets")
 	print("Loaded chaos textures: ", chaos_textures.size())
 
+
 func _load_dir_recursive(dir: DirAccess, path: String):
 	dir.list_dir_begin()
-	var file = dir.get_next()
+	var file := dir.get_next()
+
 	while file != "":
 		if file.begins_with("."):
 			file = dir.get_next()
 			continue
 
-		var full_path = path + "/" + file
+		var full_path := path + "/" + file
+
 		if dir.current_is_dir():
-			var sub = DirAccess.open(full_path)
+			var sub := DirAccess.open(full_path)
 			if sub:
 				_load_dir_recursive(sub, full_path)
 		else:
 			if file.get_extension().to_lower() in ["png", "jpg", "jpeg", "webp"]:
-				var tex = load(full_path)
+				var tex := load(full_path)
 				if tex:
 					chaos_textures.append(tex)
+
 		file = dir.get_next()
+
 	dir.list_dir_end()
+
 
 func increase_value():
 	var gain := randi_range(1, 50)
 
 	if randf() < 0.05:
-		gain *= randi_range(10, 10) # LEGENDARY MOMENT
+		gain *= 10 # LEGENDARY MOMENT
 		instruction_label.text = "LEGENDARY STRUXTURE"
 
 	structure_value += gain
@@ -58,34 +64,35 @@ func increase_value():
 func _on_BigButton_pressed():
 	asset_explosion()
 	random_flash()
-	increase_value ()
+	increase_value()
 	update_instruction()
+
 
 func asset_explosion():
 	if chaos_textures.is_empty():
 		return
 
-	if chaos_node.get_child_count() > MAX_CHAOS:
-		# soft decay: delete OLDEST, not all
+	# HARD CHAOS CAP (FIXED INDENTATION)
+	while chaos_node.get_child_count() > MAX_CHAOS:
 		chaos_node.get_child(0).queue_free()
-		
+
 	for i in randi_range(1, 4):
 		spawn_chaos_asset(chaos_textures.pick_random())
 
+	# EXTRA INSANE SPRITE2D (KEPT)
 	var sprite := Sprite2D.new()
 	sprite.texture = chaos_textures.pick_random()
-
 	sprite.position = Vector2(
 		randf_range(0, get_viewport_rect().size.x),
 		randf_range(0, get_viewport_rect().size.y)
 	)
-
 	sprite.rotation = randf_range(0, TAU)
 	sprite.scale = Vector2.ONE * randf_range(0.2, 3.5)
-	sprite.z_index = randi_range(-1000, 1000)
+	sprite.z_index = -10  # ALWAYS BELOW UI
 
 	chaos_node.add_child(sprite)
 	spawn_count += 1
+
 
 func random_flash():
 	if randf() < 0.3 and not chaos_textures.is_empty():
@@ -93,6 +100,7 @@ func random_flash():
 		effect_flash.visible = true
 		await get_tree().process_frame
 		effect_flash.visible = false
+
 
 func update_instruction():
 	if spawn_count < 10:
@@ -113,40 +121,31 @@ func spawn_chaos_asset(texture: Texture2D):
 	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
 	sprite.custom_minimum_size = Vector2(120, 120)
+	sprite.z_index = -10  # UI SAFETY
 
-	# RANDOM POSITION (SCREEN SPACE)
-	var screen_size = get_viewport_rect().size
+	# RANDOM POSITION
+	var screen_size := get_viewport_rect().size
 	sprite.position = Vector2(
 		randf_range(0, screen_size.x - 120),
 		randf_range(0, screen_size.y - 120)
 	)
 
-	# VERY BAD INITIAL TRANSFORM
+	# BAD TRANSFORM (INTENTIONAL)
 	sprite.rotation = randf_range(-1.5, 1.5)
 	sprite.scale = Vector2.ONE * randf_range(0.5, 1.5)
 
 	chaos_node.add_child(sprite)
 
-	# === POOR MAN'S "ANIMATION" ===
+	# POOR MAN ANIMATION (KEPT)
 	var tween := create_tween()
 	tween.set_loops(2)
+	tween.tween_property(sprite, "rotation", sprite.rotation + randf_range(-3, 3), 0.2)
+	tween.tween_property(sprite, "scale", Vector2.ONE * randf_range(0.2, 2.5), 0.2)
 
-	tween.tween_property(
-		sprite,
-		"rotation",
-		sprite.rotation + randf_range(-3, 3),
-		0.2
-	)
-
-	tween.tween_property(
-		sprite,
-		"scale",
-		Vector2.ONE * randf_range(0.2, 2.5),
-		0.2
-	)
-
-	# === AUTO DELETE AFTER 2–3 SECONDS ===
-	await get_tree().create_timer(randf_range(2.0, 3.0)).timeout
-
-	if is_instance_valid(sprite):
-		sprite.queue_free()
+	# BULLETPROOF AUTO-DELETE (NO STACKING BUGS)
+	var timer := Timer.new()
+	timer.one_shot = true
+	timer.wait_time = randf_range(2.0, 3.0)
+	sprite.add_child(timer)
+	timer.start()
+	timer.timeout.connect(sprite.queue_free)
