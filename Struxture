@@ -58,7 +58,7 @@ func increase_value():
 		instruction_label.text = "LEGENDARY STRUXTURE"
 
 	structure_value += gain
-	big_button.text = "AthallahLynx1: " + str(structure_value)
+	big_button.text = "" + str(structure_value)
 
 
 func _on_BigButton_pressed():
